@@ -1,0 +1,65 @@
+import com.github.pires.obd.commands.engine.RPMCommand;
+import com.github.pires.obd.commands.protocol.EchoOffCommand;
+import com.github.pires.obd.commands.protocol.LineFeedOffCommand;
+import com.github.pires.obd.commands.protocol.SelectProtocolCommand;
+import com.github.pires.obd.commands.protocol.TimeoutCommand;
+import com.github.pires.obd.enums.ObdProtocols;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.UUID;
+
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.widget.TextView;
+
+public class MainActivity extends AppCompatActivity {
+
+    private BluetoothSocket socket;
+    private BluetoothDevice device;
+    private TextView rpmTextView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        rpmTextView = findViewById(R.id.rpmTextView);
+
+        // Suponiendo que el dispositivo ya está emparejado
+        BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
+        device = btAdapter.getRemoteDevice("00:1D:A5:68:98:8D"); // Reemplazar con la dirección MAC del dispositivo OBD-II
+
+        new ConnectOBDTask().execute();
+    }
+
+    private class ConnectOBDTask extends AsyncTask<Void, Void, Void> {
+        @Override
+        protected Void doInBackground(Void... params) {
+            try {
+                socket = device.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
+                socket.connect();
+                InputStream inStream = socket.getInputStream();
+                OutputStream outStream = socket.getOutputStream();
+
+                new EchoOffCommand().run(inStream, outStream);
+                new LineFeedOffCommand().run(inStream, outStream);
+                new TimeoutCommand(125).run(inStream, outStream);
+                new SelectProtocolCommand(ObdProtocols.AUTO).run(inStream, outStream);
+
+                RPMCommand rpmCommand = new RPMCommand();
+                rpmCommand.run(inStream, outStream);
+                final String rpm = rpmCommand.getFormattedResult();
+
+                runOnUiThread(() -> rpmTextView.setText(rpm));
+
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+    }
+}
