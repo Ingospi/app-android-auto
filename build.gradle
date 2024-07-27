@@ -1,0 +1,6 @@
+dependencies {
+    implementation 'com.github.pires.obd:obd-java-api:1.2.0' // Biblioteca para OBD-II
+    implementation 'com.google.android.gms:play-services-maps:17.0.0' // API de mapas, si es necesario
+    implementation 'com.google.android.gms:play-services-location:18.0.0' // API de localización, si es necesario
+    implementation 'com.google.android.libraries.car:car-app:1.2.0-beta01' // Android Auto
+}
